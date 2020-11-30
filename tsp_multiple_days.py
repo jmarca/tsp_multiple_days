@@ -340,12 +340,12 @@ for node in range(2, num_nodes):
 # Add time window constraints for each regular node
 for node in range(2,num_nodes):
   index = manager.NodeToIndex(node)
-  time_dimension.CumulVar(index).SetRange(node_time_window[0], node_time_window[1])
+  time_dimension.CumulVar(index).SetRange(day_start, day_end)
 
-# This also applies to the overnight nodes
+# This also applies to the overnight nodes and morning nodes
 for node in range(num_nodes, total_nodes):
   index = manager.NodeToIndex(node)
-  time_dimension.CumulVar(index).SetRange(node_time_window[0], node_time_window[1])
+  time_dimension.CumulVar(index).SetRange(day_start, day_end)
 
 
 # Add time window constraints for each vehicle start node.
