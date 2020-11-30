@@ -406,42 +406,45 @@ search_parameters.log_search = False
 
 # Solve the problem.
 solution = routing.SolveWithParameters(search_parameters)
+if not solution:
+  print("no solution found")
+else:
+  print("solution found.  Objective value is ",solution.ObjectiveValue())
 
-print(solution)
+  # Print the results
+  result = {
+    'Dropped': [],
+    'Scheduled': []
+  }
 
-# Print the results
-result = {
-  'Dropped': [],
-  'Scheduled': []
-}
+  # Return the dropped locations
+  print('routing size is ', routing.Size())
+  for index in range(routing.Size()):
+    if routing.IsStart(index) or routing.IsEnd(index):
+      continue
+    if solution.Value(routing.NextVar(index)) == index:
+      result['Dropped'].append(manager.IndexToNode(index))
 
-# Return the dropped locations
-print('routing size is ', routing.Size())
-for index in range(routing.Size()):
-  if routing.IsStart(index) or routing.IsEnd(index):
-    continue
-  if solution.Value(routing.NextVar(index)) == index:
-    result['Dropped'].append(manager.IndexToNode(index))
+  # Return the scheduled locations
+  time = 0
+  index = routing.Start(0)
+  while not routing.IsEnd(index):
+    time = time_dimension.CumulVar(index)
+    count = count_dimension.CumulVar(index)
+    node = manager.IndexToNode(index)
+    if node > num_nodes:
+      node = 'Overnight at {}, dummy for 1'.format(node)
+    result['Scheduled'].append([node, solution.Value(count), solution.Min(time)/3600,solution.Max(time)/3600])
+    index = solution.Value(routing.NextVar(index))
 
-# Return the scheduled locations
-time = 0
-index = routing.Start(0)
-while not routing.IsEnd(index):
   time = time_dimension.CumulVar(index)
   count = count_dimension.CumulVar(index)
-  node = manager.IndexToNode(index)
-  if node > num_nodes:
-    node = 'Overnight at {}, dummy for 1'.format(node)
-  result['Scheduled'].append([node, solution.Value(count), solution.Min(time)/3600,solution.Max(time)/3600])
-  index = solution.Value(routing.NextVar(index))
-time = time_dimension.CumulVar(index)
-count = count_dimension.CumulVar(index)
-result['Scheduled'].append([manager.IndexToNode(index), solution.Value(count), solution.Min(time)/3600,solution.Max(time)/3600])
+  result['Scheduled'].append([manager.IndexToNode(index), solution.Value(count), solution.Min(time)/3600,solution.Max(time)/3600])
 
-print(result['Dropped'])
+  print(result['Dropped'])
 
-print('Scheduled')
-for line in result['Scheduled']:
-  print(line)
+  print('Scheduled')
+  for line in result['Scheduled']:
+    print(line)
 
-#print(result)
+  #print(result)
