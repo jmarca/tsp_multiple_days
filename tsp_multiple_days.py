@@ -375,6 +375,15 @@ time_dimension = routing.GetDimensionOrDie('Time')
 
 print('created time dimension')
 
+# get rid of slack for all regular nodes, all morning nodes
+for node in range(2, num_nodes):
+  index = manager.NodeToIndex(node)
+  time_dimension.SlackVar(index).SetValue(0)
+for node in morning_nodes:
+  index = manager.NodeToIndex(node)
+  time_dimension.SlackVar(index).SetValue(0)
+
+
 # Allow all locations except the first two to be droppable.
 for node in range(2, num_nodes):
   routing.AddDisjunction([manager.NodeToIndex(node)], disjunction_penalty)
