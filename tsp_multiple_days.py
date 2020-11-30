@@ -265,9 +265,10 @@ Capacity = 3600 * 24 # one day
 
 # create dummy nodes for returning to the depot every night
 night_nodes = range(num_nodes, num_nodes+num_days)
+morning_nodes = range(num_nodes+num_days, num_nodes+num_days+num_days)
 
 
-total_nodes = num_nodes + len(night_nodes)
+total_nodes = num_nodes + len(night_nodes) +len(morning_nodes)
 # Create the routing index manager.
 manager = pywrapcp.RoutingIndexManager(total_nodes, 1, [0], [1])
 
