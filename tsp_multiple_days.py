@@ -265,6 +265,8 @@ Capacity = 3600 * 24 # one day
 
 # create dummy nodes for returning to the depot every night
 night_nodes = range(num_nodes, num_nodes+num_days)
+
+# create dummy nodes linked to night nodes that fix the AM depart time
 morning_nodes = range(num_nodes+num_days, num_nodes+num_days+num_days)
 
 
@@ -272,7 +274,10 @@ total_nodes = num_nodes + len(night_nodes) +len(morning_nodes)
 # Create the routing index manager.
 manager = pywrapcp.RoutingIndexManager(total_nodes, 1, [0], [1])
 
-print('made manager')
+print('made manager with total nodes {} = {} + {} + {}'.format(total_nodes,
+                                                               num_nodes,
+                                                               len(night_nodes),
+                                                               len(morning_nodes)))
 # Create Routing Model.
 routing = pywrapcp.RoutingModel(manager)
 
@@ -282,6 +287,40 @@ def transit_callback(from_index, to_index):
   # Convert from routing variable Index to time matrix NodeIndex.
   from_node = manager.IndexToNode(from_index)
   to_node = manager.IndexToNode(to_index)
+
+  # prevent movement to morning nodes from non-night nodes
+  if from_node in night_nodes:
+    if to_node  in morning_nodes:
+      return 0
+    else:
+      return day_end*10 # way more than ever possible
+
+  # prevent movement to night nodes from morning nodes
+  if from_node in morning_nodes:
+    if to_node in night_nodes:
+      return day_end*10 # way more than ever possible
+
+  # prevent movement to morning nodes from morning nodes
+  if from_node in morning_nodes:
+    if to_node in morning_nodes:
+      return day_end*10 # way more than ever possible
+
+  # prevent movement to night nodes from night nodes
+  if from_node in night_nodes:
+    if to_node in night_nodes:
+      return day_end*10 # way more than ever possible
+
+  # prevent movement to night nodes from depot nodes
+  if from_node == 0:
+    if to_node in night_nodes:
+      return day_end*10 # way more than ever possible
+
+  # prevent movement to night nodes from depot nodes
+  if to_node == 1:
+    if from_node in morning_nodes:
+      return day_end*10 # way more than ever possible
+
+
 
   # adjust if either node is a night node
   if from_node >= num_nodes:
@@ -307,8 +346,10 @@ def time_callback(from_index, to_index):
   _service_time = node_service_time
   if from_node == 0 or from_node==1:
     _service_time = 0
-  if from_node > num_nodes:
+  if from_node in night_nodes:
     _service_time = overnight_time
+  if from_node in morning_nodes:
+    _service_time = 0
 
   # adjust if either node is a night node
   if from_node >= num_nodes:
@@ -337,6 +378,10 @@ print('created time dimension')
 # Allow all locations except the first two to be droppable.
 for node in range(2, num_nodes):
   routing.AddDisjunction([manager.NodeToIndex(node)], disjunction_penalty)
+
+# Allow all overnight nodes to be dropped for free
+for node in range(num_nodes, total_nodes):
+  routing.AddDisjunction([manager.NodeToIndex(node)], 0)
 
 # Add time window constraints for each regular node
 for node in range(2,num_nodes):
@@ -368,27 +413,44 @@ count_dimension = routing.GetDimensionOrDie('Counting')
 
 print('created count dim')
 
-# prior_index = 0
 
-# final_index = manager.NodeToIndex(1)
+
+# link overnight, morning nodes
 # solver = routing.solver()
-# for special_node in range(num_nodes, total_nodes):
-#   index = manager.NodeToIndex(special_node)
-#   if prior_index > 0:
-#     # this node comes after prior day
-#     active_node = routing.ActiveVar(index)
-#     active_prior = routing.ActiveVar(prior_index)
-#     count_node = count_dimension.CumulVar(index) * active_node
-#     count_prior = count_dimension.CumulVar(prior_index) * active_prior
-#     constraint =  count_node >= count_prior
-#     conditional_expr = solver.ConditionalExpression(active_node,
-#                                                     constraint,
-
-#       1)
-#     solver.Add(conditional_expr >= 1)
-
-#   prior_index = index
+# for (night_node, morning_node) in zip(night_nodes, morning_nodes):
+#   night_index = manager.NodeToIndex(night_node)
+#   # can only go from night to morning
+#   for other in range(total_nodes):
+#     if other in [night_node, morning_node]:
+#       continue;
+#     other_index = manager.NodeToIndex(other)
+#     routing.NextVar(night_index).RemoveValue(other_index)
 # print('done setting up ordering constraints between days')
+
+# for (night_node, morning_node) in zip(night_nodes, morning_nodes):
+#   # print('did not die', night_node, morning_node)
+#   morning_index = manager.NodeToIndex(morning_node)
+#   for other in range(total_nodes):
+#     if other in [0, 1, night_node, morning_node]:
+#       continue;
+#     # print('did not die', other)
+#     other_index = manager.NodeToIndex(other)
+#     if routing.NextVar(other_index).Contains(morning_index):
+#       routing.NextVar(other_index).RemoveValue(morning_index)
+# #assert 0
+
+  # constraint = routing.NextVar(night_index) == morning_index
+  # # this node comes after prior day
+  # active_night = routing.ActiveVar(night_index)
+  # active_morning = routing.ActiveVar(morning_index)
+  # solver.Add(active_night == active_morning)
+  # conditional_expr = solver.ConditionalExpression(active_night,
+  #                                                 constraint,
+  #                                                 1)
+  # solver.Add(conditional_expr >= 1)
+  # prior_index = index
+
+print('done setting up ordering constraints between days')
 
 # Instantiate route start and end times to produce feasible times.
 # routing.AddVariableMinimizedByFinalizer(time_dimension.CumulVar(routing.Start(0)))
@@ -419,12 +481,14 @@ else:
   }
 
   # Return the dropped locations
-  print('routing size is ', routing.Size())
   for index in range(routing.Size()):
     if routing.IsStart(index) or routing.IsEnd(index):
       continue
+    node = manager.IndexToNode(index)
+    if node in night_nodes or node in morning_nodes:
+      continue
     if solution.Value(routing.NextVar(index)) == index:
-      result['Dropped'].append(manager.IndexToNode(index))
+      result['Dropped'].append(node)
 
   # Return the scheduled locations
   time = 0
@@ -433,8 +497,11 @@ else:
     time = time_dimension.CumulVar(index)
     count = count_dimension.CumulVar(index)
     node = manager.IndexToNode(index)
-    if node > num_nodes:
+    if node in night_nodes:
       node = 'Overnight at {}, dummy for 1'.format(node)
+    if node in morning_nodes:
+      node = 'Starting day at {}, dummy for 1'.format(node)
+
     result['Scheduled'].append([node, solution.Value(count), solution.Min(time)/3600,solution.Max(time)/3600])
     index = solution.Value(routing.NextVar(index))
 
@@ -442,6 +509,7 @@ else:
   count = count_dimension.CumulVar(index)
   result['Scheduled'].append([manager.IndexToNode(index), solution.Value(count), solution.Min(time)/3600,solution.Max(time)/3600])
 
+  print('Dropped')
   print(result['Dropped'])
 
   print('Scheduled')
