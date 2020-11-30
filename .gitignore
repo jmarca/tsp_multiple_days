@@ -1,0 +1,8 @@
+__pycache__
+*~
+*.ass
+test.png
+.cache
+.*history
+.coverage
+*py,cover
