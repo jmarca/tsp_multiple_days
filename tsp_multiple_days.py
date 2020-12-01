@@ -316,7 +316,7 @@ def transit_callback(from_index, to_index):
       return day_end*10 # way more than ever possible
 
   # prevent movement to night nodes from depot nodes
-  if to_node == 1:
+  if to_node == 0 or to_node == 1:
     if from_node in morning_nodes:
       return day_end*10 # way more than ever possible
 
@@ -421,6 +421,38 @@ routing.AddConstantDimension(1,  # increment by 1
 count_dimension = routing.GetDimensionOrDie('Counting')
 
 print('created count dim')
+
+# use count dim to enforce ordering of overnight, morning nodes
+solver = routing.solver()
+for i in range(len(night_nodes)):
+  inode = night_nodes[i]
+  iidx = manager.NodeToIndex(inode)
+  iactive = routing.ActiveVar(iidx)
+
+  for j in range(i+1, len(night_nodes)):
+    # make i come before j using count dimension
+    jnode = night_nodes[j]
+    jidx = manager.NodeToIndex(jnode)
+    jactive = routing.ActiveVar(jidx)
+
+    solver.Add(count_dimension.CumulVar(iidx) * iactive * jactive <=
+               count_dimension.CumulVar(jidx) * iactive * jactive)
+
+for i in range(len(morning_nodes)):
+  inode = morning_nodes[i]
+  iidx = manager.NodeToIndex(inode)
+  iactive = routing.ActiveVar(iidx)
+
+  for j in range(i+1, len(morning_nodes)):
+    # make i come before j using count dimension
+    jnode = morning_nodes[j]
+    jidx = manager.NodeToIndex(jnode)
+    jactive = routing.ActiveVar(jidx)
+
+    solver.Add(count_dimension.CumulVar(iidx) * iactive * jactive <=
+               count_dimension.CumulVar(jidx) * iactive * jactive)
+
+
 
 
 
