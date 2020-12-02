@@ -31,7 +31,7 @@ def main():
         print("--days parameter must be 1 or more")
         assert args.days > 0
 
-    num_days = min(0, args.days - 1)
+    num_days = args.days - 1
 
     node_service_time = args.service * 60
     overnight_time = -18*3600
