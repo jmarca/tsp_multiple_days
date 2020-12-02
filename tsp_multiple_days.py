@@ -26,7 +26,12 @@ def main():
     args = parser.parse_args()
     day_start = args.start * 3600
     day_end = args.end * 3600
-    num_days = args.days
+
+    if args.days <= 0:
+        print("--days parameter must be 1 or more")
+        assert args.days > 0
+
+    num_days = min(0, args.days - 1)
 
     node_service_time = args.service * 60
     overnight_time = -18*3600
