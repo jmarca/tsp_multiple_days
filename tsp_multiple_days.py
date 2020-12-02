@@ -152,9 +152,17 @@ def main():
         jnode = night_nodes[j]
         jidx = manager.NodeToIndex(jnode)
         jactive = routing.ActiveVar(jidx)
-
+        solver.Add(iactive >= jactive)
         solver.Add(count_dimension.CumulVar(iidx) * iactive * jactive <=
                    count_dimension.CumulVar(jidx) * iactive * jactive)
+
+      # if night node is active, AND night_node is not the last night,
+      # must transition to corresponding morning node
+      if i < len(morning_nodes):
+        i_morning_idx = manager.NodeToIndex(morning_nodes[i])
+        # solver.Add(iactive == routing.ActiveVar(i_morning_idx))
+        solver.Add(count_dimension.CumulVar(iidx) + 1 ==
+                   count_dimension.CumulVar(i_morning_idx))
 
     for i in range(len(morning_nodes)):
       inode = morning_nodes[i]
@@ -167,6 +175,7 @@ def main():
         jidx = manager.NodeToIndex(jnode)
         jactive = routing.ActiveVar(jidx)
 
+        solver.Add(iactive >= jactive)
         solver.Add(count_dimension.CumulVar(iidx) * iactive * jactive <=
                    count_dimension.CumulVar(jidx) * iactive * jactive)
 
