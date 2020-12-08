@@ -278,9 +278,9 @@ def transit_callback(manager,
         return day_end*1000 # way more than ever possible
 
     # adjust if either node is a night node
-    if from_node >= _num_nodes:
+    if from_node in night_nodes or from_node in morning_nodes:
       from_node = 1
-    if to_node >= _num_nodes:
+    if to_node in night_nodes or to_node in morning_nodes:
       to_node = 1
 
     return Matrix[from_node][to_node]
