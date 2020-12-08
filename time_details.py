@@ -250,32 +250,32 @@ def transit_callback(manager,
       if to_node  in morning_nodes:
         return 0
       else:
-        return day_end*10 # way more than ever possible
+        return day_end*1000 # way more than ever possible
 
     # prevent movement to night nodes from morning nodes
     if from_node in morning_nodes:
       if to_node in night_nodes:
-        return day_end*10 # way more than ever possible
+        return day_end*1000 # way more than ever possible
 
     # prevent movement to morning nodes from morning nodes
     if from_node in morning_nodes:
       if to_node in morning_nodes:
-        return day_end*10 # way more than ever possible
+        return day_end*1000 # way more than ever possible
 
     # prevent movement to night nodes from night nodes
     if from_node in night_nodes:
       if to_node in night_nodes:
-        return day_end*10 # way more than ever possible
+        return day_end*1000 # way more than ever possible
 
     # prevent movement to night nodes from depot nodes
     if from_node == 0:
       if to_node in night_nodes:
-        return day_end*10 # way more than ever possible
+        return day_end*1000 # way more than ever possible
 
     # prevent movement to night nodes from depot nodes
     if to_node == 0 or to_node == 1:
       if from_node in morning_nodes:
-        return day_end*10 # way more than ever possible
+        return day_end*1000 # way more than ever possible
 
     # adjust if either node is a night node
     if from_node >= _num_nodes:

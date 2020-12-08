@@ -34,12 +34,13 @@ def main():
     num_days = args.days - 1
 
     node_service_time = args.service * 60
-    overnight_time = -18*3600
+    overnight_time =   (day_start - day_end) # -18*3600 #
 
     disjunction_penalty = 10000000
 
-    Slack_Max = 3600 * 24 # one day
-    Capacity = 3600 * 24 # one day
+    Slack_Max = (day_end - day_start) - day_start # night node demand minus no-work day
+    #  3600*24
+    Capacity = day_end # most time that can be collected in one day
 
     num_nodes = T.num_nodes()
     # create dummy nodes for returning to the depot every night
