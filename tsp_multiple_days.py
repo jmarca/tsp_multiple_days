@@ -25,7 +25,7 @@ def main():
                         help='Maximum run time for solver, in seconds.  Default is 10 seconds.')
     parser.add_argument('--debug', action='store_true', dest='debug', default=False,
                         help="Turn on solver logging.")
-    parser.add_argument('--guided_local', action='store_true', dest='guided_local',
+    parser.add_argument('--no_guided_local', action='store_true', dest='guided_local_off',
                         default=False,
                         help='Whether or not to use the guided local search metaheuristic')
     parser.add_argument('--skip_mornings', action='store_true', dest='skip_mornings',
@@ -209,7 +209,8 @@ def main():
     search_parameters.first_solution_strategy = (routing_enums_pb2.FirstSolutionStrategy.PARALLEL_CHEAPEST_INSERTION)
     print('set up the setup.  Total nodes is ', total_nodes, ' and real nodes is ', num_nodes)
     # Setting local search metaheuristics:
-    search_parameters.local_search_metaheuristic = (routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
+    if not args.guided_local_off:
+        search_parameters.local_search_metaheuristic = (routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
     search_parameters.time_limit.seconds = args.timelimit
     search_parameters.log_search = args.debug
 
