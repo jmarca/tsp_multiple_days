@@ -69,7 +69,11 @@ def main():
                                                                    len(night_nodes),
                                                                    len(morning_nodes)))
     # Create Routing Model.
-    routing = pywrapcp.RoutingModel(manager)
+    # use precaching on OR-Tools side.  So Much Faster
+    model_parameters = pywrapcp.DefaultRoutingModelParameters()
+    model_parameters.max_callback_cache_size = 2 * total_nodes * total_nodes
+    routing = pywrapcp.RoutingModel(manager, model_parameters)
+    # routing = pywrapcp.RoutingModel(manager)
 
     transit_callback_fn = partial(T.transit_callback,
                                   manager,
