@@ -268,10 +268,11 @@ def transit_callback(manager,
       if to_node in night_nodes:
         return INFINITE_TIME
 
-    # prevent movement to night nodes, morning nodes from depot nodes
-    if from_node == 0:
-      if to_node in night_nodes or to_node in morning_nodes:
-        return INFINITE_TIME
+    # actually, don't do this, as it gets stuck avoiding night and mornings
+    # # prevent movement to night nodes, morning nodes from depot nodes
+    # if from_node == 0:
+    #   if to_node in night_nodes or to_node in morning_nodes:
+    #     return INFINITE_TIME
 
     # prevent movement to start or end nodes from morning nodes
     if to_node == 0 or to_node == 1:
