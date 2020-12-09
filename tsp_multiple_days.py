@@ -27,7 +27,10 @@ def main():
                         help="Turn on solver logging.")
     parser.add_argument('--guided_local', action='store_true', dest='guided_local',
                         default=False,
-                        help='whether or not to use the guided local search metaheuristic')
+                        help='Whether or not to use the guided local search metaheuristic')
+    parser.add_argument('--skip_mornings', action='store_true', dest='skip_mornings',
+                        default=False,
+                        help='Whether or not to use dummy morning nodes.  Default is true')
 
     args = parser.parse_args()
     day_start = args.start * 3600
@@ -54,6 +57,8 @@ def main():
 
     # create dummy nodes linked to night nodes that fix the AM depart time
     morning_nodes = range(num_nodes+num_days, num_nodes+num_days+num_days)
+    if args.skip_mornings:
+        morning_nodes = []
 
     total_nodes = num_nodes + len(night_nodes) +len(morning_nodes)
     # Create the routing index manager.
@@ -101,6 +106,7 @@ def main():
     print('created time dimension')
 
     # get rid of slack for all regular nodes, all morning nodes
+    # but keep for depot, night nodes
     for node in range(2, num_nodes):
       index = manager.NodeToIndex(node)
       time_dimension.SlackVar(index).SetValue(0)
@@ -114,7 +120,9 @@ def main():
       routing.AddDisjunction([manager.NodeToIndex(node)], disjunction_penalty)
 
     # Allow all overnight nodes to be dropped for free
-    for node in range(num_nodes, total_nodes):
+    for node in night_nodes:
+      routing.AddDisjunction([manager.NodeToIndex(node)], 0)
+    for node in morning_nodes:
       routing.AddDisjunction([manager.NodeToIndex(node)], 0)
 
     # Add time window constraints for each regular node
@@ -128,7 +136,7 @@ def main():
       time_dimension.CumulVar(index).SetRange(day_start, day_end)
 
 
-    # Add time window constraints for each vehicle start node.
+    # Add time window constraints for each vehicle start/end node.
     for veh in range(0,1):
       index = routing.Start(veh)
       time_dimension.CumulVar(index).SetMin(day_start)
@@ -167,7 +175,8 @@ def main():
       # must transition to corresponding morning node
       if i < len(morning_nodes):
         i_morning_idx = manager.NodeToIndex(morning_nodes[i])
-        # solver.Add(iactive == routing.ActiveVar(i_morning_idx))
+        i_morning_active = routing.ActiveVar(i_morning_idx)
+        solver.Add(iactive == i_morning_active)
         solver.Add(count_dimension.CumulVar(iidx) + 1 ==
                    count_dimension.CumulVar(i_morning_idx))
 
@@ -186,44 +195,6 @@ def main():
         solver.Add(count_dimension.CumulVar(iidx) * iactive * jactive <=
                    count_dimension.CumulVar(jidx) * iactive * jactive)
 
-
-
-
-
-    # link overnight, morning nodes
-    # solver = routing.solver()
-    # for (night_node, morning_node) in zip(night_nodes, morning_nodes):
-    #   night_index = manager.NodeToIndex(night_node)
-    #   # can only go from night to morning
-    #   for other in range(total_nodes):
-    #     if other in [night_node, morning_node]:
-    #       continue;
-    #     other_index = manager.NodeToIndex(other)
-    #     routing.NextVar(night_index).RemoveValue(other_index)
-    # print('done setting up ordering constraints between days')
-
-    # for (night_node, morning_node) in zip(night_nodes, morning_nodes):
-    #   # print('did not die', night_node, morning_node)
-    #   morning_index = manager.NodeToIndex(morning_node)
-    #   for other in range(total_nodes):
-    #     if other in [0, 1, night_node, morning_node]:
-    #       continue;
-    #     # print('did not die', other)
-    #     other_index = manager.NodeToIndex(other)
-    #     if routing.NextVar(other_index).Contains(morning_index):
-    #       routing.NextVar(other_index).RemoveValue(morning_index)
-    # #assert 0
-
-      # constraint = routing.NextVar(night_index) == morning_index
-      # # this node comes after prior day
-      # active_night = routing.ActiveVar(night_index)
-      # active_morning = routing.ActiveVar(morning_index)
-      # solver.Add(active_night == active_morning)
-      # conditional_expr = solver.ConditionalExpression(active_night,
-      #                                                 constraint,
-      #                                                 1)
-      # solver.Add(conditional_expr >= 1)
-      # prior_index = index
 
     print('done setting up ordering constraints between days')
 
@@ -297,6 +268,7 @@ def main():
       print(result['Dropped'])
 
       print('Scheduled')
+      print('[node, order, min time, max time]')
       for line in result['Scheduled']:
         print(line)
 
