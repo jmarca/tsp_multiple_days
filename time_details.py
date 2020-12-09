@@ -244,38 +244,40 @@ def transit_callback(manager,
     # Convert from routing variable Index to time matrix NodeIndex.
     from_node = manager.IndexToNode(from_index)
     to_node = manager.IndexToNode(to_index)
-
-    # prevent movement to morning nodes from non-night nodes
-    if from_node in night_nodes:
-      if to_node  in morning_nodes:
-        return 0
-      else:
-        return day_end*1000 # way more than ever possible
+    INFINITE_TIME = day_end*1000  # way more than ever possible
+    # night nodes can *only* transition to morning nodes
+    if len(morning_nodes) > 0:
+        if from_node in night_nodes:
+            if to_node  in morning_nodes:
+                return 0
+            else:
+                return INFINITE_TIME
 
     # prevent movement to night nodes from morning nodes
     if from_node in morning_nodes:
       if to_node in night_nodes:
-        return day_end*1000 # way more than ever possible
+        return INFINITE_TIME
 
     # prevent movement to morning nodes from morning nodes
     if from_node in morning_nodes:
       if to_node in morning_nodes:
-        return day_end*1000 # way more than ever possible
+        return INFINITE_TIME
 
     # prevent movement to night nodes from night nodes
     if from_node in night_nodes:
       if to_node in night_nodes:
-        return day_end*1000 # way more than ever possible
+        return INFINITE_TIME
 
-    # prevent movement to night nodes from depot nodes
+    # prevent movement to night nodes, morning nodes from depot nodes
     if from_node == 0:
-      if to_node in night_nodes:
-        return day_end*1000 # way more than ever possible
+      if to_node in night_nodes or to_node in morning_nodes:
+        return INFINITE_TIME
 
-    # prevent movement to night nodes from depot nodes
+    # prevent movement to start or end nodes from morning nodes
     if to_node == 0 or to_node == 1:
       if from_node in morning_nodes:
-        return day_end*1000 # way more than ever possible
+        return INFINITE_TIME
+
 
     # adjust if either node is a night node
     if from_node in night_nodes or from_node in morning_nodes:
