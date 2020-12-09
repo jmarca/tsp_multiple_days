@@ -1,8 +1,14 @@
 from ortools.constraint_solver import pywrapcp
 from ortools.constraint_solver import routing_enums_pb2
 from functools import partial
+from datetime import datetime, time, timedelta
 import argparse
 import time_details as T
+
+def timedelta_format(td):
+    ts = int(td.total_seconds())
+    tm = time(hour=(ts//3600),second=(ts%3600//60))
+    return tm.strftime("%H:%S")
 
 def main():
 
@@ -260,10 +266,10 @@ def main():
           result['Dropped'].append(node)
 
       # Return the scheduled locations
-      time = 0
+      cumultime = 0
       index = routing.Start(0)
       while not routing.IsEnd(index):
-        time = time_dimension.CumulVar(index)
+        cumultime = time_dimension.CumulVar(index)
         count = count_dimension.CumulVar(index)
         node = manager.IndexToNode(index)
         if node in night_nodes:
@@ -271,12 +277,21 @@ def main():
         if node in morning_nodes:
           node = 'Starting day at {}, dummy for 1'.format(node)
 
-        result['Scheduled'].append([node, solution.Value(count), solution.Min(time)/3600,solution.Max(time)/3600])
+        mintime = timedelta(seconds=solution.Min(cumultime))
+        maxtime = timedelta(seconds=solution.Max(cumultime))
+        result['Scheduled'].append([node, solution.Value(count),
+                                    timedelta_format(mintime),
+                                    timedelta_format(maxtime)])
         index = solution.Value(routing.NextVar(index))
 
-      time = time_dimension.CumulVar(index)
+      cumultime = time_dimension.CumulVar(index)
       count = count_dimension.CumulVar(index)
-      result['Scheduled'].append([manager.IndexToNode(index), solution.Value(count), solution.Min(time)/3600,solution.Max(time)/3600])
+      mintime = timedelta(seconds=solution.Min(cumultime))
+      maxtime = timedelta(seconds=solution.Max(cumultime))
+      result['Scheduled'].append([manager.IndexToNode(index),
+                                  solution.Value(count),
+                                    timedelta_format(mintime),
+                                    timedelta_format(maxtime)])
 
       print('Dropped')
       print(result['Dropped'])
